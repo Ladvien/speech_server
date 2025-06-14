@@ -1,40 +1,49 @@
 [tool.poetry]
-name = "your_package_name"
-version = "0.0.1"
-description = "A short description of your package."
-authors = ["C. Thomas Brittain <cthomasbrittain@hotmail.com>"]
-license = "MIT"
+name = "chatterbox-tts-api"
+version = "0.1.0"
+description = "FastAPI wrapper for Chatterbox TTS"
+authors = ["C. Thomas Brittain"]
 readme = "README.md"
-
-[tool.poetry.urls]
-homepage = "https://github.com/Ladvien/your_package_name"
-repository = "https://github.com/Ladvien/your_package_name"
-documentation = "https://your_package_name.readthedocs.io/en/latest/"
-
+packages = [{include = "chatterbox_tts_api", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.10"
-pyyaml = "^6.0.2"
-rich = "^13.9.4"
+python = ">=3.9,<3.13"
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+pydantic = "^2.5.0"
+rich = "^13.7.0"
+python-multipart = "^0.0.6"
+aiofiles = "^23.2.0"
+httpx = "^0.25.2"
+# Chatterbox TTS dependencies
+chatterbox-tts = "^0.1.1"
+torch = "^2.1.0"
+torchaudio = "^2.1.0"
+numpy = "^1.24.0"
+soundfile = "^0.12.0"
+setuptools = "^80.9.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
-sphinx = "^8.1.3"
-myst-parser = "^4.0.1"
-sphinx-autobuild = "^2024.10.3"
-furo = "^2024.8.6"
-sphinx-autoapi = "^3.5.0"
-sphinx-autodoc2 = "^0.5.0"
-doc-utils = "^0.0.2"
-poethepoet = "^0.32.2"
+pytest = "^7.4.3"
+pytest-asyncio = "^0.21.1"
+black = "^23.11.0"
+isort = "^5.12.0"
+flake8 = "^6.1.0"
+mypy = "^1.7.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poe.tasks]
-docs         = "sphinx-build docs/source docs/build/html" # a simple command task
-docs_view    = "sphinx-autobuild docs/source docs/build/html" # a simple command task
-patch        = "poetry version patch" # a simple command task
-_publish      = "poetry publish --build" # a simple command task
-release = ["docs", "patch", "_publish"] # a task that depends on other tasks
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true

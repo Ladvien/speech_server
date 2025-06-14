@@ -274,3 +274,6 @@ output/
 /target
 /models
 talking.log
+
+/*.wav
+*.wav

@@ -4,6 +4,10 @@
 - [] Add streaming
 - [] Add more voices
 
+## Voices!
+```sh
+wget https://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2
+```
 
 A FastAPI wrapper around [Chatterbox TTS](https://github.com/resemble-ai/chatterbox) for text-to-speech synthesis.
 

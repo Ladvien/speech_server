@@ -279,3 +279,10 @@ talking.log
 *.wav
 *.mp3
 *.mp4
+voices/*
+
+*.tar.bz2
+*.tar.gz
+*.zip
+
+runtime_data/*

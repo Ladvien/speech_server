@@ -1,6 +1,7 @@
 """
 FastAPI wrapper for Chatterbox TTS
 """
+
 from pathlib import Path
 from typing import Optional, List
 from contextlib import asynccontextmanager
@@ -8,6 +9,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import StreamingResponse
+from fastapi import Request
+
 
 from chatterbox_tts_api.models import HealthResponse, TTSRequest, TTSResponse, VoiceInfo
 
@@ -177,36 +181,22 @@ async def get_voice_sample(voice_name: str):
         raise HTTPException(status_code=500, detail="Failed to retrieve voice sample")
 
 
-@app.post("/synthesize", response_model=TTSResponse)
-async def synthesize_text(request: TTSRequest):
-    """Synthesize text to speech with optional voice cloning"""
+@app.post("/synthesize")
+async def synthesize_text(request: Request, payload: TTSRequest):
     try:
-        logger.info(
-            f"Synthesizing text: '{request.text[:50]}...' with voice: {request.voice_name}"
+        logger.info(f"Streaming synthesis for text: {payload.text[:50]}...")
+        stream = tts_service.synthesize_stream(
+            text=payload.text,
+            voice_name=payload.voice_name,
+            audio_prompt_path=payload.audio_prompt_path,
+            exaggeration=payload.exaggeration,
+            cfg_weight=payload.cfg_weight,
+            output_format=payload.output_format,
         )
-
-        audio_file_id, duration = await tts_service.synthesize(
-            text=request.text,
-            voice_name=request.voice_name,
-            audio_prompt_path=request.audio_prompt_path,
-            speed=request.speed,
-            exaggeration=request.exaggeration,
-            cfg_weight=request.cfg_weight,
-            output_format=request.output_format,
-        )
-
-        logger.info(
-            f"Synthesis completed. File ID: {audio_file_id}, Duration: {duration}s"
-        )
-
-        return TTSResponse(
-            message="Text synthesized successfully",
-            audio_file_id=audio_file_id,
-            duration=duration,
-        )
+        return StreamingResponse(stream, media_type="audio/wav")
     except Exception as e:
-        logger.error(f"Synthesis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Synthesis failed: {str(e)}")
+        logger.error(f"Streaming failed: {e}")
+        raise HTTPException(status_code=500, detail="Streaming failed.")
 
 
 @app.get("/audio/{audio_file_id}")

@@ -3,6 +3,7 @@ Chatterbox TTS Service integration
 """
 
 import os
+import struct
 import tempfile
 import uuid
 from typing import Dict, List, Optional, Tuple
@@ -131,6 +132,58 @@ class ChatterboxTTSService:
             )
 
         return voices
+
+    async def synthesize_stream(
+        self,
+        text,
+        voice_name=None,
+        audio_prompt_path=None,
+        exaggeration=0.5,
+        cfg_weight=0.5,
+        output_format="wav",
+    ):
+        # Determine actual audio prompt path
+        final_audio_prompt_path = None
+
+        if audio_prompt_path:
+            final_audio_prompt_path = audio_prompt_path
+        elif voice_name and voice_name in self.cloned_voices:
+            final_audio_prompt_path = self.cloned_voices[voice_name]["audio_file_path"]
+            logger.info(f"Using cloned voice '{voice_name}' in streaming synthesis")
+
+        audio_data, sample_rate = await self._synthesize_audio(
+            text, final_audio_prompt_path, exaggeration, cfg_weight
+        )
+
+        # Convert float32 audio to PCM 16-bit
+        pcm_audio = (audio_data * 32767).astype(np.int16).tobytes()
+
+        # Build a WAV header (mono, 16-bit)
+        num_samples = len(pcm_audio) // 2
+        data_size = num_samples * 2
+        wav_header = struct.pack(
+            "<4sI4s4sIHHIIHH4sI",
+            b"RIFF",
+            36 + data_size,
+            b"WAVE",
+            b"fmt ",
+            16,
+            1,
+            1,
+            sample_rate,
+            sample_rate * 2,
+            2,
+            16,
+            b"data",
+            data_size,
+        )
+
+        yield wav_header
+
+        # Yield in small chunks (~0.5s)
+        chunk_size = sample_rate * 2 // 2
+        for i in range(0, len(pcm_audio), chunk_size):
+            yield pcm_audio[i : i + chunk_size]
 
     async def synthesize(
         self,

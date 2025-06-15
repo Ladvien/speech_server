@@ -1,73 +1,95 @@
+#!/usr/bin/env python3
+"""
+Stream cloned TTS audio and play it in real-time.
+"""
 import requests
 import pyaudio
+import os
 import numpy as np
-from scipy.signal import resample
 
-# Settings
-TTS_URL = "http://localhost:8000/synthesize"
-TEXT = "Hello! This is Chatterbox, streaming on Linux."
-INPUT_RATE = 24000
-OUTPUT_RATE = 44100
-CHANNELS = 2
-CHUNK = 2048
 
-# Request payload
-payload = {"text": TEXT, "output_format": "wav"}
+def test_voice_cloning():
+    base_url = "http://192.168.1.110:8000"
+    audio_file_path = "voice_samples/beks_voice_sample.wav"
+    # audio_file_path = "voice_samples/echos_voice_sample.wav"
+    voice_name = "bek"
+    test_text = "What's up you sexy hunk of man meat!?"
 
-# Init PyAudio
-p = pyaudio.PyAudio()
+    # Audio playback config
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 2  # Stereo
+    RATE = 24000
+    CHUNK = 2048
 
-# Pick working output device
-print("🔎 Available output devices:")
-for i in range(p.get_device_count()):
-    info = p.get_device_info_by_index(i)
-    if info["maxOutputChannels"] > 0:
-        print(f"{i}: {info['name']} (Channels: {info['maxOutputChannels']})")
+    def mono_to_stereo(chunk):
+        mono = np.frombuffer(chunk, dtype=np.int16)
+        stereo = np.repeat(mono[:, np.newaxis], CHANNELS, axis=1).flatten()
+        return stereo.astype(np.int16).tobytes()
 
-# OPTIONAL: Choose correct device index manually
-output_device_index = None  # or something like 7 for pipewire
+    if not os.path.exists(audio_file_path):
+        print(f"❌ File not found: {audio_file_path}")
+        return
 
-# Start streaming
-try:
-    print("🔊 Connecting and streaming TTS audio...")
-    response = requests.post(TTS_URL, json=payload, stream=True)
-    response.raise_for_status()
+    print(f"🎤 Voice name: {voice_name}")
+    print(f"📝 Text: {test_text}\n")
 
-    stream = p.open(
-        format=pyaudio.paInt16,
-        channels=CHANNELS,
-        rate=OUTPUT_RATE,
-        output=True,
-        output_device_index=output_device_index,
-    )
+    # Step 1: Clone voice if not already cloned
+    print("📤 Checking/Cloning voice...")
+    voices = requests.get(f"{base_url}/voices").json()
+    if voice_name not in [v["voice_name"] for v in voices]:
+        with open(audio_file_path, "rb") as f:
+            files = {"audio_file": f}
+            data = {
+                "voice_name": voice_name,
+                "description": f"Cloned from {os.path.basename(audio_file_path)}",
+            }
+            response = requests.post(f"{base_url}/voices/clone", files=files, data=data)
+        if response.status_code != 200:
+            print(f"❌ Voice cloning failed: {response.status_code}")
+            print(f"   Response: {response.text}")
+            return
+        print("✅ Voice cloned.")
+    else:
+        print("✅ Voice already exists.")
+
+    # Step 2: Request streaming synthesis
+    print("\n🗣️  Requesting streaming synthesis...")
+    payload = {
+        "text": test_text,
+        "voice_name": voice_name,
+        "cfg_weight": 0.1,
+        "exaggeration": 0.2,
+    }
+
+    print(f"   Payload: {payload}\n")
+
+    response = requests.post(f"{base_url}/synthesize", json=payload, stream=True)
+    if response.status_code != 200:
+        print(f"❌ Streaming failed: {response.status_code}")
+        print(f"   Response: {response.text}")
+        return
+
+    print("🔊 Playing streamed audio...\n")
+
+    # Step 3: Play audio stream
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True)
 
     header_skipped = False
     for chunk in response.iter_content(chunk_size=CHUNK):
-        if not chunk:
-            continue
-        if not header_skipped:
-            chunk = chunk[44:]  # skip WAV header
-            header_skipped = True
-
-        # Mono int16 array
-        mono = np.frombuffer(chunk, dtype=np.int16)
-
-        # Resample to 44.1kHz
-        resampled = resample(mono, int(len(mono) * OUTPUT_RATE / INPUT_RATE))
-
-        # Stereo
-        stereo = (
-            np.repeat(resampled[:, np.newaxis], CHANNELS, axis=1)
-            .flatten()
-            .astype(np.int16)
-        )
-
-        stream.write(stereo.tobytes())
+        if chunk:
+            if not header_skipped:
+                chunk = chunk[44:]  # skip WAV header
+                header_skipped = True
+            stereo = mono_to_stereo(chunk)
+            stream.write(stereo)
 
     stream.stop_stream()
     stream.close()
-    print("✅ Playback complete.")
-except Exception as e:
-    print(f"❌ Error: {e}")
-finally:
     p.terminate()
+
+    print("✅ Playback complete.\n")
+
+
+if __name__ == "__main__":
+    test_voice_cloning()

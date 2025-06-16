@@ -1,6 +1,6 @@
 # === Kokoro TTS Config ===
 
-from speech_server import (
+from src import (
     create_app,
     TTSServerConfig,
     KokoroTTSServiceConfig,

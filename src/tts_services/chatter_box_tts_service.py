@@ -13,11 +13,12 @@ from chatterbox.tts import ChatterboxTTS
 from speech_server.common.base_tts_config import TTSBaseConfig
 
 try:
-    from ..server.logger import get_logger
+    from ..speech_server.server.logger import get_logger
+    logger = get_logger(__name__)
 except ImportError:
-    from server.logger import get_logger
+    import logging
+    logger = logging.getLogger(__name__)
 
-logger = get_logger(__name__)
 
 
 @dataclass

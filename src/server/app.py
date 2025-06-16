@@ -20,11 +20,11 @@ tts_service = None
 
 def create_app(config: TTSServerConfig) -> FastAPI:
     global logger
-    from speech_server.server.logger import setup_logger
+    from speech_server.server.logger import get_logger
 
     print(config)
 
-    logger = setup_logger(__name__)
+    logger = get_logger(__name__)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

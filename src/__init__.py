@@ -1,5 +1,4 @@
 # chatter_tool/__init__.py
-
 from .server.app import create_app
 from .server.app import TTSRequest, TTSResponse, VoiceInfo, HealthResponse
 from .server.config import TTSServerConfig
@@ -25,10 +24,12 @@ __all__ = [
     "HealthResponse",
     "TTSServerConfig",
     "ChatterboxTTSService",
+    "ChatterboxTTSServiceConfig",
+    "ChatterboxPipelineConfig", 
+    "ChatterboxResponseConfig",
     "KokoroTTSService",
     "KokoroTTSServiceConfig",
     "KokoroPipelineConfig",
     "KokoroResponseConfig",
     "TTSService",
-    "TTSBaseConfig",
 ]

@@ -1,8 +1,10 @@
 # Chatterbox TTS API
 
 ## TODO:
-- [] Add streaming
-- [] Add more voices
+- [ ] Productionize the API
+- [X] Add Ollama chat
+- [X] Add streaming
+- [X] Add more voices
 
 ## Voices!
 ```sh

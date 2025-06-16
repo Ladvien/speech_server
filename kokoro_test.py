@@ -23,6 +23,7 @@ This is almost real time  talking.
     payload = {
         "text": test_text,
         "voice_name": voice_name,
+        "speed": 0.1,
     }
     response = requests.post(f"{base_url}/synthesize", json=payload, stream=True)
     response.raise_for_status()

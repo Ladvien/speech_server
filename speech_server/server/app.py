@@ -5,8 +5,8 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional, List
 
-from chatterbox_tts_api.server.config import TTSServerConfig
-from chatterbox_tts_api.server.models import (
+from speech_server.server.config import TTSServerConfig
+from speech_server.server.models import (
     HealthResponse,
     TTSRequest,
     TTSResponse,
@@ -20,7 +20,7 @@ tts_service = None
 
 def create_app(config: TTSServerConfig) -> FastAPI:
     global logger
-    from chatterbox_tts_api.server.logger import setup_logger
+    from speech_server.server.logger import setup_logger
 
     print(config)
 

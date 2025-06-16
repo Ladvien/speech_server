@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "chatterbox-tts-api"
+name = "speech-server"
 version = "0.1.0"
 description = "FastAPI wrapper for Chatterbox TTS"
 authors = ["C. Thomas Brittain"]
 readme = "README.md"
-packages = [{ include = "chatterbox_tts_api", from = "src" }]
+packages = [{ include = "speech_server", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"

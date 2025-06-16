@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable, List
-from chatterbox_tts_api.common.base_tts_service import TTSService
+from speech_server.common.base_tts_service import TTSService
 
 
 @dataclass

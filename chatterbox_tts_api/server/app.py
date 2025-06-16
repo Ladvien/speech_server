@@ -30,6 +30,7 @@ def create_app(config: TTSServerConfig) -> FastAPI:
     async def lifespan(app: FastAPI):
         global tts_service
         logger.info(f"Starting {config.title}...")
+        logger.info(config)
 
         try:
             tts_service = config.service_factory()

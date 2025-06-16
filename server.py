@@ -51,16 +51,25 @@ chatterbox_config = ChatterboxTTSServiceConfig(
     ),
 )
 
-# === Server App Config ===
+# # === Server App Config ===
+# config = TTSServerConfig(
+#     # Swap to Chatterbox by replacing this:
+#     service_factory=lambda: KokoroTTSService(config=kokoro_config),
+#     allow_origins=["*"],
+#     title="Kokoro TTS API",
+#     version="0.1.0",
+#     description="Kokoro ONNX TTS Engine",
+# )
+
 config = TTSServerConfig(
     # Swap to Chatterbox by replacing this:
-    # service_factory=lambda: KokoroTTSService(config=kokoro_config),
     service_factory=lambda: ChatterboxTTSService(config=chatterbox_config),
     allow_origins=["*"],
-    title="Kokoro TTS API",
+    title="Chatterbox TTS API",
     version="0.1.0",
-    description="Kokoro ONNX TTS Engine",
+    description="Chatterbox TTS Engine",
 )
+
 
 app = create_app(config)
 

@@ -1,0 +1,14 @@
+[Unit]
+Description=Chatterbox TTS API Server
+After=network.target
+
+[Service]
+User=your_user
+Group=your_user
+WorkingDirectory=/home/your_user/your_project_dir
+ExecStart=/home/your_user/.venv/bin/python server.py
+Restart=on-failure
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

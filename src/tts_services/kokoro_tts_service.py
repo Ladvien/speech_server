@@ -13,8 +13,8 @@ from fastapi.responses import StreamingResponse
 import numpy as np
 
 
-from chatterbox_tts_api.common.base_tts_config import TTSBaseConfig
-from chatterbox_tts_api.common.base_tts_service import TTSService
+from speech_server.common.base_tts_config import TTSBaseConfig
+from speech_server.common.base_tts_service import TTSService
 
 
 @dataclass

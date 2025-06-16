@@ -17,7 +17,7 @@ from fastapi import UploadFile
 try:
     from ..server.logger import get_logger
 except ImportError:
-    from chatterbox_tts_api.server.logger import get_logger
+    from speech_server.server.logger import get_logger
 
 logger = get_logger(__name__)
 logger.info("Loading Chatterbox TTS model...")

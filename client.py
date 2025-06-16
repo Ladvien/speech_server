@@ -10,7 +10,8 @@ os.environ['ALSA_VERBOSITY'] = '0'
 
 BASE_TTS_URL = "http://192.168.1.110:8888"
 BASE_OLLAMA_URL = "http://192.168.1.110:11434"
-VOICE_NAME = "ai_mee"
+# VOICE_NAME = "ai_mee"
+VOICE_NAME = "bf_emma"
 VOICE_SAMPLE_PATH = "voice_samples/ai_mee.wav"
 # MODEL = "neural-chat:7b"
 # MODEL = "qwen2.5:32b-instruct-q4_0"
@@ -63,12 +64,22 @@ def clone_voice(voice_name: str, audio_file_path: str):
 
     print(f"🧬 Cloning voice '{voice_name}' from sample file...")
 
-    with open(audio_file_path, "rb") as f:
-        files = {"audio_file": (os.path.basename(audio_file_path), f, "audio/mpeg")}
-        data = {"voice_name": voice_name, "description": "Auto-cloned for chat demo"}
-        response = requests.post(f"{BASE_TTS_URL}/voices/clone", files=files, data=data)
-        response.raise_for_status()
-        print(f"✅ Voice '{voice_name}' cloned successfully.")
+    try:
+        with open(audio_file_path, "rb") as f:
+            files = {
+                "audio_file": (os.path.basename(audio_file_path), f, "audio/mpeg")
+            }
+            data = {"voice_name": voice_name, "description": "Auto-cloned for chat demo"}
+            response = requests.post(f"{BASE_TTS_URL}/voices/clone", files=files, data=data)
+
+            if response.status_code == 405:
+                print("⚠️  Server does not support voice cloning (HTTP 405). Skipping.")
+                return
+
+            response.raise_for_status()
+            print(f"✅ Voice '{voice_name}' cloned successfully.")
+    except requests.exceptions.HTTPError as e:
+        print(f"❌ Voice cloning failed: {e}")
 
 
 def synthesize(text: str, voice_name: str = None) -> bytes:
@@ -76,7 +87,7 @@ def synthesize(text: str, voice_name: str = None) -> bytes:
         "text": text,
         "voice_name": voice_name,
         "output_format": "wav",
-        "speed": 1.0,
+        "speed": 0.3
     }
 
     if is_chatterbox:
@@ -138,9 +149,23 @@ def query_ollama_chat(history: list, model: str) -> str:
 def interactive_chat():
     voices = fetch_available_voices()
     print(f"🧠 Detected TTS backend: {'Chatterbox' if is_chatterbox else 'Kokoro'}")
+    print(f"🎙️ Available voices: {voices}")
 
+    selected_voice = VOICE_NAME
     if VOICE_NAME not in voices:
-        clone_voice(VOICE_NAME, VOICE_SAMPLE_PATH)
+        try:
+            clone_voice(VOICE_NAME, VOICE_SAMPLE_PATH)
+            voices = fetch_available_voices()  # refresh voice list
+        except Exception as e:
+            print(f"⚠️ Voice cloning failed or not supported: {e}")
+
+        if VOICE_NAME not in voices:
+            selected_voice = voices[0] if voices else None
+            print(f"⚠️ Voice '{VOICE_NAME}' not found. Falling back to '{selected_voice}'")
+
+    if not selected_voice:
+        print("❌ No available voices. Exiting.")
+        return
 
     history = [{"role": "system", "content": SYSTEM_PROMPT}]
     print("🗣️ Type a message to chat (type 'exit' to quit)\n")
@@ -158,7 +183,7 @@ def interactive_chat():
 
         history.append({"role": "assistant", "content": reply})
 
-        raw_wav = synthesize(reply, VOICE_NAME)
+        raw_wav = synthesize(reply, selected_voice)
         sample_width, channels, rate, frames = parse_wav(raw_wav)
         faded = fade_out_stereo(frames, channels)
         play_audio(faded, sample_width, channels, rate)

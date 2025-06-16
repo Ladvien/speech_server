@@ -10,7 +10,7 @@ from datetime import datetime
 from dataclasses import dataclass, field
 
 from chatterbox.tts import ChatterboxTTS
-from speech_server.common.base_tts_config import TTSBaseConfig
+from src.common.base_tts_config import TTSBaseConfig
 
 try:
     from ..server.logger import get_logger

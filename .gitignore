@@ -286,3 +286,7 @@ voices/*
 *.zip
 
 runtime_data/*
+
+# Bytecode
+__pycache__/
+*.pyc

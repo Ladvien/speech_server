@@ -7,9 +7,9 @@ import struct
 import soundfile as sf
 import torch
 from datetime import datetime
+from dataclasses import dataclass, field
 
 from chatterbox.tts import ChatterboxTTS
-
 from chatterbox_tts_api.common.base_tts_config import TTSBaseConfig
 
 try:
@@ -20,8 +20,27 @@ except ImportError:
 logger = get_logger(__name__)
 
 
+@dataclass
+class ChatterboxPipelineConfig:
+    exaggeration: float = 0.5
+    cfg_weight: float = 0.5
+
+
+@dataclass
+class ChatterboxResponseConfig:
+    format: str = "wav"
+    sample_rate: int = 24000
+    channels: int = 1
+
+
+@dataclass
+class ChatterboxTTSServiceConfig(TTSBaseConfig):
+    pipeline: ChatterboxPipelineConfig = field(default_factory=ChatterboxPipelineConfig)
+    response: ChatterboxResponseConfig = field(default_factory=ChatterboxResponseConfig)
+
+
 class ChatterboxTTSService:
-    def __init__(self, config: TTSBaseConfig):
+    def __init__(self, config: ChatterboxTTSServiceConfig):
         self.config = config
         self.model = None
         self.chatterbox = None
@@ -30,10 +49,8 @@ class ChatterboxTTSService:
         self.audio_files: Dict[str, str] = {}
         self.cloned_voices: Dict[str, Dict] = {}
 
-        # Derived paths
         self.temp_dir = os.path.join(self.config.runtime_data_dir, "chatterbox_tmp")
         self.voices_dir = os.path.join(self.temp_dir, "voices")
-
         os.makedirs(self.voices_dir, exist_ok=True)
 
     async def initialize(self):
@@ -85,10 +102,13 @@ class ChatterboxTTSService:
         text,
         voice_name=None,
         audio_prompt_path=None,
-        exaggeration=0.5,
-        cfg_weight=0.5,
+        exaggeration=None,
+        cfg_weight=None,
         output_format="wav",
     ):
+        exaggeration = exaggeration or self.config.pipeline.exaggeration
+        cfg_weight = cfg_weight or self.config.pipeline.cfg_weight
+
         prompt_path = audio_prompt_path or self.cloned_voices.get(voice_name, {}).get(
             "audio_file_path"
         )
@@ -123,14 +143,17 @@ class ChatterboxTTSService:
         text,
         voice_name=None,
         audio_prompt_path=None,
-        exaggeration=0.5,
-        cfg_weight=0.5,
+        exaggeration=None,
+        cfg_weight=None,
         output_format="wav",
     ) -> Tuple[str, float]:
         if not await self.is_ready():
             raise RuntimeError("TTS not initialized")
         if output_format not in self.config.supported_formats:
             raise ValueError(f"Unsupported format: {output_format}")
+
+        exaggeration = exaggeration or self.config.pipeline.exaggeration
+        cfg_weight = cfg_weight or self.config.pipeline.cfg_weight
 
         file_id = str(uuid.uuid4())
         prompt_path = audio_prompt_path or self.cloned_voices.get(voice_name, {}).get(
@@ -151,16 +174,23 @@ class ChatterboxTTSService:
         cfg_weight: float,
     ) -> Tuple[np.ndarray, int]:
         if audio_prompt_path and os.path.exists(audio_prompt_path):
+            logger.info(f"Generating audio (prompt={audio_prompt_path})...")
             audio_tensor = self.chatterbox.generate(
                 text=text,
                 audio_prompt_path=audio_prompt_path,
                 exaggeration=exaggeration,
                 cfg_weight=cfg_weight,
             )
+            logger.info("Audio generation complete.")
+
         else:
+            logger.info(f"Generating audio (prompt={audio_prompt_path})...")
             audio_tensor = self.chatterbox.generate(
-                text=text, exaggeration=exaggeration, cfg_weight=cfg_weight
+                text=text,
+                exaggeration=exaggeration,
+                cfg_weight=cfg_weight,
             )
+            logger.info("Audio generation complete.")
 
         audio_data = (
             audio_tensor.cpu().numpy()

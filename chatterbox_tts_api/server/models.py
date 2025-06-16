@@ -44,8 +44,9 @@ class VoiceCloneRequest(BaseModel):
     description: Optional[str] = Field(None, description="Description of the voice")
 
 
+# TODO: Split voice into per model. Kokoro requires it, chatterbox does not.
 class VoiceInfo(BaseModel):
-    name: str  # required for Kokoro
+    name: Optional[str] = None  # Chatterbox
     voice_name: Optional[str] = None  # Chatterbox
     description: Optional[str] = None
     audio_file_path: Optional[str] = None

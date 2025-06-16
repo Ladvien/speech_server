@@ -22,6 +22,8 @@ def create_app(config: TTSServerConfig) -> FastAPI:
     global logger
     from chatterbox_tts_api.server.logger import setup_logger
 
+    print(config)
+
     logger = setup_logger(__name__)
 
     @asynccontextmanager
@@ -30,7 +32,7 @@ def create_app(config: TTSServerConfig) -> FastAPI:
         logger.info(f"Starting {config.title}...")
 
         try:
-            tts_service = config.service_factory()  # <-- ✅ Use factory here
+            tts_service = config.service_factory()
             await tts_service.initialize()
             logger.info("TTS service initialized successfully")
         except Exception as e:
@@ -146,7 +148,7 @@ def register_routes(app: FastAPI):
     @app.post("/synthesize")
     async def synthesize_text(request: Request, payload: TTSRequest):
         try:
-            stream = tts_service.synthesize_stream(  # ✅ No await here
+            stream = tts_service.synthesize_stream(
                 text=payload.text,
                 voice_name=payload.voice_name,
                 audio_prompt_path=payload.audio_prompt_path,

@@ -5,11 +5,13 @@ import uuid
 import requests
 import soundfile as sf
 from typing import AsyncGenerator, Optional, Tuple, Dict, List
-from fastapi import UploadFile
-import tempfile
+from fastapi import HTTPException, UploadFile
 from dataclasses import dataclass, field
 from kokoro_onnx import Kokoro
 import logging
+from fastapi.responses import StreamingResponse
+import numpy as np
+
 
 from chatterbox_tts_api.common.base_tts_config import TTSBaseConfig
 from chatterbox_tts_api.common.base_tts_service import TTSService
@@ -35,8 +37,9 @@ class KokoroTTSServiceConfig:
     pipeline: KokoroPipelineConfig
     response: KokoroResponseConfig
 
-    voices_name: str = "voices-v1.0.bin"  # ✅ Add this back
-    model_name: str = "kokoro-v1.0.onnx"  # ✅ Add this back
+    voices_name: str = "voices-v1.0.bin"
+    model_name: str = "kokoro-v1.0.onnx"
+
     # Optional/defaults below
     runtime_data_dir: str = field(
         default_factory=lambda: os.path.abspath("runtime_data")
@@ -118,32 +121,44 @@ class KokoroTTSService(TTSService):
     async def get_available_voices(self) -> List[Dict[str, str]]:
         return [{"name": name} for name in self.model.get_voices()]
 
-    async def synthesize_stream(
+    def synthesize_stream(
         self,
         text: str,
-        voice_name: Optional[str] = None,
-        audio_prompt_path: Optional[str] = None,
-        exaggeration: float = 0.5,
-        cfg_weight: float = 0.5,
+        voice_name: str,
+        audio_prompt_path: str = None,
+        exaggeration: float = 1.0,
+        cfg_weight: float = 1.0,
         output_format: str = "wav",
-        speed: Optional[float] = None,
-    ) -> AsyncGenerator[bytes, None]:
-        voice = voice_name or self.config.pipeline.voice
-        speed = speed or self.config.pipeline.speed
-        lang = self.config.pipeline.language_code
-        fmt = self.config.response.format
-
-        cleaned_text = re.sub(r"\s+", " ", text)
-        stream = self.model.create_stream(
-            cleaned_text, voice=voice, speed=speed, lang=lang
+    ):
+        sample, sample_rate = self.model.create(
+            text=text,
+            voice=voice_name,
+            speed=self.config.pipeline.speed,
+            lang=self.config.pipeline.language_code,
+            is_phonemes=False,
+            trim=True,
         )
 
+        if sample is None or len(sample) == 0:
+            raise RuntimeError("Kokoro TTS returned empty audio.")
+
         buffer = io.BytesIO()
-        async for sample, sample_rate in stream:
+        fmt = output_format.upper()
+        if fmt == "WAV":
             sf.write(buffer, sample, samplerate=sample_rate, format=fmt)
-            buffer.seek(0)
-            yield buffer.read()
-            buffer.truncate(0)
+        else:
+            raise ValueError(f"Unsupported output format: {fmt}")
+
+        buffer.seek(0)
+
+        def stream_audio():
+            while True:
+                chunk = buffer.read(4096)
+                if not chunk:
+                    break
+                yield chunk
+
+        return stream_audio()
 
     async def synthesize(
         self,
